@@ -16,8 +16,8 @@ public class Lexico {
     DefaultTableModel modelTablaDeSimbolos;
     DefaultTableModel modelTablaErrores;
 
-    private LinkedList<Token> Salida;
-    private ArrayList<String> Reservadas;
+    private LinkedList<Token> salidaDeTokens;
+    private LinkedList<String> palabrasReservadas;
 
     private int estado;
     private String lexema;
@@ -26,298 +26,268 @@ public class Lexico {
 
     Object[] filaTablaDeSimbolos = new Object[3];
     Object[] filaTablaDeErrores = new Object[3];
-
-    String presentandoSecuencias = "";
-
     char caracter;
 
     public LinkedList<Token> analisisLexico(String codigoLeido, JTable tablaDeSimbolos, JTable tablaErrores) {
 
+        //INICIALIZANDO LAS VARIABLES DE LOS MODELOS DE LAS TABLAS
         modelTablaDeSimbolos = (DefaultTableModel) tablaDeSimbolos.getModel();
         modelTablaErrores = (DefaultTableModel) tablaErrores.getModel();
 
-        //codigoLeido = codigoLeido + "°";
-        codigoLeido = codigoLeido;
-        Salida = new LinkedList<Token>();
-        Reservadas = new ArrayList<String>();
+        //LE ASIGNO UN SIMBOLO COMO REFERENCIA AL FINAL DE MI CADENA QUE HE
+        //RECIBIDO DESDE EL JTEXTAREA
+        codigoLeido = codigoLeido + "°";
 
-        Reservadas.add("public");
-        Reservadas.add("private");
-        Reservadas.add("static");
-        Reservadas.add("void");
-        Reservadas.add("main");
-        Reservadas.add("class");
-        Reservadas.add("int");
-        Reservadas.add("String");
-        Reservadas.add("double");
-        Reservadas.add("if");
-        Reservadas.add("else");
-        Reservadas.add("System");
-        Reservadas.add("out");
-        Reservadas.add("print");
-        Reservadas.add("println");
-        Reservadas.add("new");
-        Reservadas.add("boolean");
-        Reservadas.add("true");
-        Reservadas.add("false");
-        Reservadas.add("null");
-        Reservadas.add("package");
+        salidaDeTokens = new LinkedList<Token>();
+
+        palabrasReservadas = new LinkedList<>();
+        palabrasReservadas.add("public");
+        palabrasReservadas.add("private");
+        palabrasReservadas.add("static");
+        palabrasReservadas.add("void");
+        palabrasReservadas.add("main");
+        palabrasReservadas.add("class");
+        palabrasReservadas.add("int");
+        palabrasReservadas.add("String");
+        palabrasReservadas.add("double");
+        palabrasReservadas.add("if");
+        palabrasReservadas.add("else");
+        palabrasReservadas.add("System");
+        palabrasReservadas.add("out");
+        palabrasReservadas.add("print");
+        palabrasReservadas.add("println");
+        palabrasReservadas.add("new");
+        palabrasReservadas.add("do");
+        palabrasReservadas.add("while");
+        palabrasReservadas.add("for");
+        palabrasReservadas.add("null");
+        palabrasReservadas.add("package");
 
         estado = 0;
         lexema = "";
 
+        //AL EJECUTAR ESTA FUNCIÓN, SE LIMPIEN LAS TABLAS DEL PROGRAMA
         modelTablaDeSimbolos.setRowCount(0);
         modelTablaErrores.setRowCount(0);
-        for (int i = 0; i <= codigoLeido.length() - 1; i++) {
 
+        //INICIALIZO EL FOR PARA LEER CARACTER A CARACTER TODA LA CADENA INGRESADA
+        for (int i = 0; i < codigoLeido.length(); i++) {
+
+            //OBTENGO EL CARACTER A MEDIDA QUE AUMENTA EL ÍNDICE i
             caracter = codigoLeido.charAt(i);
-            if (caracter != '\n') {
+
+            //CONTROLO QUE NO ME LLEGUE UN ESPACIO, SALTO DE LINEA, O EL SÍMBOLO
+            //DEFINIDO AL FINAL DE LA CADENA.
+            if (caracter != '\n' && caracter != '°' && caracter != ' ') {
+                //ASIGNO LOS VALORES EN LA TABLA DE SÍMBOLOS
                 filaTablaDeSimbolos[0] = caracter;
                 filaTablaDeSimbolos[1] = lexema + caracter;
                 filaTablaDeSimbolos[2] = "leer otro caracter";
-            }
-            if (caracter == ' ') {
-                filaTablaDeSimbolos[0] = "espacio";
-                //i++;
+            } else {
+                //SI NO ME LLEGAN LOS SÍMBOLOS DE LA CONDICIÓN, ENTONCES NO LE 
+                //ASIGNO VALORES A LA TABLA DE SÍMBOLOS.
+                filaTablaDeSimbolos[0] = "";
+                filaTablaDeSimbolos[1] = "";
+                filaTablaDeSimbolos[2] = "NO";
             }
 
             switch (estado) {
-
                 case 0:
+                    //SI NO LLEGA UN ESPACIO, ENTONCES PUEDO CONTINUAR, CASO CONTRARIO
+                    //NO HAGO NADA (ESTO ME SIRVE PARA QUE NO ME SALGA UN ESPACIO EN BLANCO
+                    //EN LA TABLA DE ERRORES)
+                    if (caracter != ' ') {
 
-                    if ((caracter >= 48 && caracter <= 57)) {//si viene un numero
-                        estado = 22;//me voy al estado 22
+                        //SI NO LLEGA UN SALTO DE LÍNEA, ENTONCES CONTINÚO, CASO CONTRARIO
+                        //INCREMENTO MI VARIABLE contadorLineas EN 1. 
+                        if (caracter != '\n') {
 
-                        lexema = "" + caracter;//llevo lo q tenga la cadena
-                        //System.out.println("Lexema despues del digito, estado 0: " + auxLexema);
-                        presentandoSecuencias += lexema + "\n";
-                        //auxLex = "" + caracter;
+                            if ((caracter >= 48 && caracter <= 57)) {//SI VIENE UN NUMERO
+                                estado = 22;//MI ESTADO CAMBIA A 22
+                                lexema = "" + caracter;//CONCATENO A MI LEXEMA EL CARACTER
 
-                    } else if (caracter == ' ') {
-                        lexema.replace(" ", "");
-                    } else if ((caracter >= 65 && caracter <= 90)//mayusculas
-                            || (caracter >= 97 && caracter <= 122)) {//minusculas
-                        estado = 25;
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = "leer  otro caracter";
-                    } else if (caracter == '+') {
-                        estado = 8;
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                    } else if (caracter == '-') {
-                        estado = 10;
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                    } else if (caracter == '*') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("MULTIPLICACION");
+                            } else if ((caracter >= 65 && caracter <= 90)//LETRA MAYÚSCULA
+                                    || (caracter >= 97 && caracter <= 122)) {//LETRA MINÚSCULA
+                                estado = 25;
+                                lexema += caracter;
 
-                    } else if (caracter == '/') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("DIVISION");
+                            } else if (caracter == '+') {
+                                estado = 8;
+                                lexema += caracter;
 
-                    } else if (caracter == '(') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("PARENTESIS_IZQ");
+                            } else if (caracter == '-') {
+                                estado = 10;
+                                lexema += caracter;
 
-                    } else if (caracter == ')') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("PARENTESIS_DER");
+                            } else if (caracter == '*') {
+                                lexema += caracter;
+                                agregarToken("MULTIPLICACION");
 
-                    } else if (caracter == '{') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("LLAVE_IZQ");
+                            } else if (caracter == '/') {
+                                lexema += caracter;
+                                agregarToken("DIVISION");
 
-                    } else if (caracter == '}') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("LLAVE_DER");
+                            } else if (caracter == '(') {
+                                lexema += caracter;
+                                agregarToken("PARENTESIS_IZQ");
 
-                    } else if (caracter == '[') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("CORCHETE_IZQ");
+                            } else if (caracter == ')') {
+                                lexema += caracter;
+                                agregarToken("PARENTESIS_DER");
 
-                    } else if (caracter == ']') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("CORCHETE_DER");
+                            } else if (caracter == '{') {
+                                lexema += caracter;
+                                agregarToken("LLAVE_IZQ");
 
-                    } else if (caracter == ';') {
-                        //filaBuffer[2] = "leer otro caracter";
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("FIN_LINEA");
+                            } else if (caracter == '}') {
+                                lexema += caracter;
+                                agregarToken("LLAVE_DER");
 
-                    } else if (caracter == '"') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("COMILLA_DOBLE");
+                            } else if (caracter == '[') {
+                                lexema += caracter;
+                                agregarToken("CORCHETE_IZQ");
 
-                    } else if (caracter == '\'') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("COMILLA_SIMPLE");
+                            } else if (caracter == ']') {
+                                lexema += caracter;
+                                agregarToken("CORCHETE_DER");
 
-                    } else if (caracter == '_') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("SUBRAYADO");
+                            } else if (caracter == ';') {
+                                lexema += caracter;
+                                agregarToken("FIN_LINEA");
 
-                    } else if (caracter == '=') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("ASIGNACION");
+                            } else if (caracter == '"') {
+                                lexema += caracter;
+                                agregarToken("COMILLA_DOBLE");
 
-                    } else if (caracter == '.') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("PUNTO");
+                            } else if (caracter == '\'') {
+                                lexema += caracter;
+                                agregarToken("COMILLA_SIMPLE");
 
-                    } else if (caracter == '$') {
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                        filaTablaDeSimbolos[2] = lexema;
-                        agregarToken("SIGNO_DOLAR");
+                            } else if (caracter == '_') {
+                                lexema += caracter;
+                                agregarToken("SUBRAYADO");
 
-                    } else {
-                        if (i == codigoLeido.length() - 1) {
-                            System.out.println("Fin del programa");
-                            filaTablaDeSimbolos[2] = "Fin del programa";
-                            System.out.println("Resultado: \n" + presentandoSecuencias);
-                        } else {
+                            } else if (caracter == '=') {
+                                lexema += caracter;
+                                agregarToken("ASIGNACION");
 
-                            if (caracter == '\n') {
-                                lexema.replace("\n", "");
-                                contadorLineas++;
+                            } else if (caracter == '.') {
+                                lexema += caracter;
+                                agregarToken("PUNTO");
+
+                            } else if (caracter == '$') {
+                                lexema += caracter;
+                                agregarToken("SIGNO_DOLAR");
+
                             } else {
-                                /*if (caracter == ' ') {
-                                 filaErrores[0] = "Error Léxico";
-                                 filaErrores[1] = "espacio";
-                                 filaErrores[2] = contadorLineas;
-                                 }*/
-                                if (caracter != ' ') {
+                                //SI ME LLEGA EL CARACTER ° Y EL ÍNDICE ES IGUAL 
+                                //A LA CADENA DE CARACTERES MENOS 1,
+                                //ESTO POR LO QUE ASIGNÉ UNA LETRA COMO REFERENCIA 
+                                //AL FINAL DE MI CADENA, EN ESTE CASO FINALIZA EL PROCESO
+                                //DE ANÁLISIS LÉXICO
+                                if (caracter == '°' && i == codigoLeido.length() - 1) {
+
+                                    //LE ASIGNO VALORES A LA TABLA DE SÍMBOLOS
+                                    filaTablaDeSimbolos[0] = "Fin del programa";
+                                    filaTablaDeSimbolos[2] = "enviar token y finalizar proceso de análisis";
+
+                                } else {
+                                    //SI ME LLEGA UN CARACTER QUE NO ESTÁ EN MI 
+                                    //LENGUAJE, ENTONCES ES UN ERROR Y LO GUARDO 
+                                    //EN LA TABLA DE ERRORES, PERO NO LO CARGO AL 
+                                    //BÚFFER DE LA TABLA DE SÍMBOLOS
                                     filaTablaDeErrores[0] = "Error Léxico";
                                     filaTablaDeErrores[1] = caracter;
+                                    filaTablaDeSimbolos[1] = "";
                                     filaTablaDeErrores[2] = contadorLineas;
+
+                                    estado = 0;
+                                    modelTablaErrores.addRow(filaTablaDeErrores);
+                                    tablaErrores.setModel(modelTablaErrores);
                                 }
-                                System.out.println("Error lexico: " + caracter);
-                                estado = 0;
-                                modelTablaErrores.addRow(filaTablaDeErrores);
-                                tablaErrores.setModel(modelTablaErrores);
                             }
+                        } else {
+                            contadorLineas++;
                         }
                     }
+
                     break;
 
                 case 22:
-                    if ((caracter >= 48 && caracter <= 57)) {
-                        //System.out.println("Lexema llegando al estado 22: " + auxLexema);
-                        //presentandoSecuencias += auxLexema+"\n";
-                        estado = 22;
 
-                        lexema += caracter;
-                        //System.out.println("Lexema (ciclo) del estado 22: " + auxLexema);
-                        presentandoSecuencias += lexema + "\n";
-                    } else {
-                        agregarToken("NUMERO");
-                        i--;
+                    if (caracter != ' ' && caracter != '\n') {
+                        if ((caracter >= 48 && caracter <= 57)) {//SI LLEGA UN NÚMERO
+                            estado = 22;//EL ESTADO SIGUE EN 22
+                            lexema += caracter;//SE VA CONCATENANDO EL CARACTER AL LEXEMA
+                        } else {
+                            agregarToken("NUMERO");//SI NO ES UN NÚMERO, AGREGO EL TOKEN
+                            i--;//REDUZCO EL ÍNDICE EN 1 PARA QUE ME RECONOZCA EL CARACTER DE NUEVO
+                        }
                     }
                     break;
                 case 25:
-                    if ((caracter >= 65 && caracter <= 90)//mayusculas
-                            || (caracter >= 97 && caracter <= 122)) {//minusculas
-                        estado = 25;
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
+
+                    if ((caracter >= 65 && caracter <= 90)//SI LLEGA UNA LETRA MAYÚSCULA
+                            || (caracter >= 97 && caracter <= 122)) {//SI LLEGA UNA LETRA MINÚSCULA
+                        estado = 25;//MI ESTADO SEGUIRÁ SIENDO 25
+                        lexema += caracter;//CONCATENO A MI LEXEMA EL CARACTER
 
                     } else {
-
+                        //SI NO ME LLEGA UNA LETRA
+                        //VERIFICO SI EL LEXEMA ES UNA PALABRA RESERVADA,
+                        //PARA LO CUAL LLAMO A UN MÉTODO QUE HACE ESA COMPROBACIÓN,
+                        //Y ME DEVUELVE TRUE SI ESTÁ DENTRO DE MIS PALABRAS RESERVADAS DEFINIDAS
                         if (verificarReservadas(lexema) == true) {
-                            System.out.println("Palabra Reservada: " + lexema);
-                            i--;
-
-                            agregarToken("PALABRARESERVADA");
-                            //filaBuffer[0] = "espacio";
+                            agregarToken("PALABRARESERVADA");//AGREGO EL TOKEN
+                            i--;//REDUZCO EL ÍNDICE EN 1 PARA QUE ME RECONOZCA EL CARACTER DE NUEVO
 
                         } else {
-                            System.out.println("Identificador: " + lexema);
-
-                            agregarToken("LETRA");
-                            i--;
-
+                            //SI DEVUELVE FALSO, ENTONCES LE ENVÍO EL TOKEN COMO LETRA
+                            agregarToken("LETRA");//AGREGO EL TOKEN
+                            i--;//REDUZCO EL ÍNDICE EN 1 PARA QUE ME RECONOZCA EL CARACTER DE NUEVO
                         }
                     }
                     break;
 
+                //RESTA Y DECREMENTO
                 case 10:
+                    //SI ME LLEGA OTRO SIGNO MENOS
                     if (caracter == '-') {
-                        estado = 18;
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                    } else if (caracter != '-') {
-                        presentandoSecuencias += lexema + "\n";
-                        agregarToken("RESTA");
-                        i--;
-                        //estado=17;
-                        // auxLex += caracter;
+                        lexema += caracter;//CONCATENO A MI LEXEMA
+                        agregarToken("DECREMENTO");//ENVÍO EL TOKEN COMO DECREMENTO
+                    } else if (caracter != '-') {//SI NO ME LLEGA UN SIGNO MENOS
+                        agregarToken("RESTA");//ENVÍO EL TOKEN COMO RESTA
+                        i--;//REDUZCO EL ÍNDICE EN 1 PARA QUE ME RECONOZCA EL CARACTER DE NUEVO
 
-                    } else {
-                        System.out.println("Error lexico: " + caracter);
-                        estado = 0;
                     }
-                    break;
-                case 18:
-                    agregarToken("DECREMENTO");
-                    i--;
                     break;
 
                 //SUMA E INCREMENTO
                 case 8:
+                    //SI ME LLEGA OTRO SIGNO MAS
                     if (caracter == '+') {
-                        estado = 16;
-                        lexema += caracter;
-                        presentandoSecuencias += lexema + "\n";
-                    } else if (caracter != '+') {
-                        presentandoSecuencias += lexema + "\n";
-                        agregarToken("SUMA");
-                        i--;
-                        //estado=17;
-                        // auxLex += caracter;
-                    } else {
-                        System.out.println("Error lexico: " + caracter);
-                        estado = 0;
+                        lexema += caracter;//CONCATENO A MI LEXEMA
+                        agregarToken("INCREMENTO");//ENVÍO EL TOKEN COMO INCREMENTO
+                    } else if (caracter != '+') {//SI NO ME LLEGA UN SIGNO MAS
+                        agregarToken("SUMA");//ENVÍO EL TOKEN COMO SUMA
+                        i--;//REDUZCO EL ÍNDICE EN 1 PARA QUE ME RECONOZCA EL CARACTER DE NUEVO
                     }
                     break;
-                case 16:
-                    agregarToken("INCREMENTO");
-                    i--;
-                    break;
             }
+            eliminarNOdeTablaDeSimbolos();
             modelTablaDeSimbolos.addRow(filaTablaDeSimbolos);
             tablaDeSimbolos.setModel(modelTablaDeSimbolos);
         }
-        return Salida;
+        return salidaDeTokens;
+    }
+
+    public void eliminarNOdeTablaDeSimbolos() {
+        for (int j = 0; j < modelTablaDeSimbolos.getRowCount(); j++) {
+            if (modelTablaDeSimbolos.getValueAt(j, 2).equals("NO")) {
+                modelTablaDeSimbolos.removeRow(j);
+            }
+
+        }
     }
 
     public void imprimirListaDeTokens(LinkedList<Token> listaToken, JTable tablaTokens) {
@@ -328,36 +298,32 @@ public class Lexico {
         modelTablaTokens.setRowCount(0);
 
         for (int i = 0; i < listaToken.size(); i++) {
-            //System.out.println("" + item.determinarTipoDelToken() + "-->" + item.obtenerValorDelToken());
             fila[0] = (i + 1);
             fila[2] = listaToken.get(i).getTipoDeToken();
             fila[1] = listaToken.get(i).getValorDelToken();
+            //AGREGO LAS FILAS AL MODELO 
             modelTablaTokens.addRow(fila);
+            //AGREGO A LA TABLA EL MODELO DE LA TABLA DE TOKENS
             tablaTokens.setModel(modelTablaTokens);
         }
     }
 
     public void agregarToken(String tipoToken) {
-
-        presentandoSecuencias += "enviar token y limpiar buffer" + "\n";
-
-        Salida.add(new Token(tipoToken, lexema));
-        filaTablaDeSimbolos[2] = "enviar token y limpiar buffer";
+        filaTablaDeSimbolos[1] = lexema;
+        filaTablaDeSimbolos[2] = "enviar token y limpiar búffer";
+        salidaDeTokens.add(new Token(tipoToken, lexema));
         lexema = "";
         estado = 0;
     }
 
     public boolean verificarReservadas(String palabra) {
-        //String confirmacion = "";
-        for (int i = 0; i < Reservadas.size(); i++) {
-            if (palabra.equals(Reservadas.get(i))) {
-                //confirmacion = "Reservada: " + palabra;
-                //System.out.println("PAlabra Reservada: "+Reservadas.get(i)+" en la posicion: "+(i+1));
+
+        for (int i = 0; i < palabrasReservadas.size(); i++) {
+            if (palabra.equals(palabrasReservadas.get(i))) {
                 palabraReservada = true;
                 break;
             } else {
                 palabraReservada = false;
-                //confirmacion = "identificador: " + palabra;
             }
         }
         return palabraReservada;

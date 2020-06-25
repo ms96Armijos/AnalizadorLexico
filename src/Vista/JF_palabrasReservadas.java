@@ -36,9 +36,9 @@ public class JF_palabrasReservadas extends javax.swing.JFrame {
         Reservadas.add("print");
         Reservadas.add("println");
         Reservadas.add("new");
-        Reservadas.add("boolean");
-        Reservadas.add("true");
-        Reservadas.add("false");
+        Reservadas.add("do");
+        Reservadas.add("while");
+        Reservadas.add("for");
         Reservadas.add("null");
         Reservadas.add("package");
         

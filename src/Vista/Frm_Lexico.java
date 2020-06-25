@@ -28,10 +28,9 @@ public class Frm_Lexico extends javax.swing.JFrame {
         initComponents();
         this.setLocationRelativeTo(null);
     }
-    
-    
+
     public int DetectarComentarios(String lineaLeida) {
-        
+
         if (lineaLeida.replace(" ", "").startsWith("//")) {
             return 0;
         }
@@ -50,10 +49,10 @@ public class Frm_Lexico extends javax.swing.JFrame {
         if (lineaLeida.isEmpty()) {
             return 0;
         }
-        if (lineaLeida.replace(" ", "").length()==0) {
+        if (lineaLeida.replace(" ", "").length() == 0) {
             return 0;
         }
-        return -1;        
+        return -1;
     }
 
     @SuppressWarnings("unchecked")
@@ -96,7 +95,7 @@ public class Frm_Lexico extends javax.swing.JFrame {
 
         txtAreaDeTexto.setColumns(20);
         txtAreaDeTexto.setRows(5);
-        txtAreaDeTexto.setText("int x;\nmain(){\n\n}");
+        txtAreaDeTexto.setText("int x;\nmain(){\n}");
         jScrollPane1.setViewportView(txtAreaDeTexto);
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
@@ -295,11 +294,10 @@ public class Frm_Lexico extends javax.swing.JFrame {
                 String linea;
                 while ((linea = b.readLine()) != null) {
                     if (DetectarComentarios(linea) == -1) {
-                        System.out.println("Linea " + linea);
                         ObteniendoCadena += linea + "\n";
                         txtAreaDeTexto.setText(ObteniendoCadena);
                     } else {
-                        System.out.println("Linea no incluida " + linea);
+                        //System.out.println("Linea no incluida " + linea);
                     }
                 }
                 b.close();

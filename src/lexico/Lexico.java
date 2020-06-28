@@ -3,6 +3,7 @@ package lexico;
 import modelo.Token;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
@@ -28,7 +29,7 @@ public class Lexico {
     Object[] filaTablaDeErrores = new Object[3];
     char caracter;
 
-    public LinkedList<Token> analisisLexico(String codigoLeido, JTable tablaDeSimbolos, JTable tablaErrores) {
+    public LinkedList<Token> analisisLexico(String codigoLeido, JTable tablaDeSimbolos, JTable tablaErrores, JLabel txtCantErrores) {
 
         //INICIALIZANDO LAS VARIABLES DE LOS MODELOS DE LAS TABLAS
         modelTablaDeSimbolos = (DefaultTableModel) tablaDeSimbolos.getModel();
@@ -86,13 +87,27 @@ public class Lexico {
             } else {
                 //SI NO ME LLEGAN LOS SÍMBOLOS DE LA CONDICIÓN, ENTONCES NO LE 
                 //ASIGNO VALORES A LA TABLA DE SÍMBOLOS.
-                filaTablaDeSimbolos[0] = "";
+                filaTablaDeSimbolos[0] = "espacio en blanco";
                 filaTablaDeSimbolos[1] = "";
                 filaTablaDeSimbolos[2] = "NO";
             }
-
             switch (estado) {
                 case 0:
+                    //SI ME LLEGA EL CARACTER ° Y EL ÍNDICE ES IGUAL 
+                    //A LA CADENA DE CARACTERES MENOS 1,
+                    //ESTO POR LO QUE ASIGNÉ UNA LETRA COMO REFERENCIA 
+                    //AL FINAL DE MI CADENA, EN ESTE CASO FINALIZA EL PROCESO
+                    //DE ANÁLISIS LÉXICO
+                    if (caracter == '°' && i == codigoLeido.length() - 1) {
+
+                        //LE ASIGNO VALORES A LA TABLA DE SÍMBOLOS
+                        filaTablaDeSimbolos[0] = "Fin del programa";
+                        filaTablaDeSimbolos[1] = "espacio final";
+                        filaTablaDeSimbolos[2] = "enviar token y finalizar proceso de análisis";
+                        break;
+
+                    }
+
                     //SI NO LLEGA UN ESPACIO, ENTONCES PUEDO CONTINUAR, CASO CONTRARIO
                     //NO HAGO NADA (ESTO ME SIRVE PARA QUE NO ME SALGA UN ESPACIO EN BLANCO
                     //EN LA TABLA DE ERRORES)
@@ -180,32 +195,22 @@ public class Lexico {
                                 agregarToken("SIGNO_DOLAR");
 
                             } else {
-                                //SI ME LLEGA EL CARACTER ° Y EL ÍNDICE ES IGUAL 
-                                //A LA CADENA DE CARACTERES MENOS 1,
-                                //ESTO POR LO QUE ASIGNÉ UNA LETRA COMO REFERENCIA 
-                                //AL FINAL DE MI CADENA, EN ESTE CASO FINALIZA EL PROCESO
-                                //DE ANÁLISIS LÉXICO
-                                if (caracter == '°' && i == codigoLeido.length() - 1) {
+                                //SI ME LLEGA UN CARACTER QUE NO ESTÁ EN MI 
+                                //LENGUAJE, ENTONCES ES UN ERROR Y LO GUARDO 
+                                //EN LA TABLA DE ERRORES, PERO NO LO CARGO AL 
+                                //BÚFFER DE LA TABLA DE SÍMBOLOS
+                                filaTablaDeErrores[0] = "Error Léxico";
+                                filaTablaDeErrores[1] = caracter;
+                                filaTablaDeSimbolos[1] = "";
+                                filaTablaDeSimbolos[2] = "Error, leer otro caracter";
+                                filaTablaDeErrores[2] = contadorLineas;
 
-                                    //LE ASIGNO VALORES A LA TABLA DE SÍMBOLOS
-                                    filaTablaDeSimbolos[0] = "Fin del programa";
-                                    filaTablaDeSimbolos[2] = "enviar token y finalizar proceso de análisis";
+                                estado = 0;
 
-                                } else {
-                                    //SI ME LLEGA UN CARACTER QUE NO ESTÁ EN MI 
-                                    //LENGUAJE, ENTONCES ES UN ERROR Y LO GUARDO 
-                                    //EN LA TABLA DE ERRORES, PERO NO LO CARGO AL 
-                                    //BÚFFER DE LA TABLA DE SÍMBOLOS
-                                    filaTablaDeErrores[0] = "Error Léxico";
-                                    filaTablaDeErrores[1] = caracter;
-                                    filaTablaDeSimbolos[1] = "";
-                                    filaTablaDeErrores[2] = contadorLineas;
-
-                                    estado = 0;
-                                    modelTablaErrores.addRow(filaTablaDeErrores);
-                                    tablaErrores.setModel(modelTablaErrores);
-                                }
+                                modelTablaErrores.addRow(filaTablaDeErrores);
+                                tablaErrores.setModel(modelTablaErrores);
                             }
+
                         } else {
                             contadorLineas++;
                         }
@@ -278,6 +283,7 @@ public class Lexico {
             modelTablaDeSimbolos.addRow(filaTablaDeSimbolos);
             tablaDeSimbolos.setModel(modelTablaDeSimbolos);
         }
+        cantidadDeErroresDetectados(txtCantErrores);
         return salidaDeTokens;
     }
 
@@ -286,11 +292,21 @@ public class Lexico {
             if (modelTablaDeSimbolos.getValueAt(j, 2).equals("NO")) {
                 modelTablaDeSimbolos.removeRow(j);
             }
+        }
+    }
+
+    public void cantidadDeErroresDetectados(JLabel txtErrores) {
+
+        txtErrores.setText("No hay errores");
+        for (int i = 0; i < modelTablaErrores.getRowCount(); i++) {
+            if (!modelTablaErrores.getValueAt(i, 2).equals("")) {
+                txtErrores.setText("Se han encontrado: " + (i + 1)+" errores");
+            }
 
         }
     }
 
-    public void imprimirListaDeTokens(LinkedList<Token> listaToken, JTable tablaTokens) {
+    public void imprimirListaDeTokens(LinkedList<Token> listaToken, JTable tablaTokens, JLabel cantidadDeTokens) {
 
         modelTablaTokens = (DefaultTableModel) tablaTokens.getModel();
         Object[] fila = new Object[3];
@@ -305,7 +321,9 @@ public class Lexico {
             modelTablaTokens.addRow(fila);
             //AGREGO A LA TABLA EL MODELO DE LA TABLA DE TOKENS
             tablaTokens.setModel(modelTablaTokens);
+            cantidadDeTokens.setText("Se han encontrado: " + (i + 1) + " tokens");
         }
+
     }
 
     public void agregarToken(String tipoToken) {

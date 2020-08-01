@@ -24,6 +24,8 @@ public class Lexico {
     LinkedList<Token> salidaDeTokens;
     LinkedList<String> palabrasReservadas;
 
+    LinkedList<String> reglasSintacticasAplicadas;
+
     int estado;
     String lexema;
     boolean palabraReservada = false;
@@ -40,7 +42,7 @@ public class Lexico {
     Object[] filaTablaDeErrores = new Object[3];
     char caracter;
 
-    public LinkedList<Token> analisisLexico(String codigoLeido, JTable tablaDeSimbolos, JTable tablaErrores, JLabel txtCantErrores, JTextArea area) {
+    public LinkedList<Token> analisisLexico(String codigoLeido, JTable tablaDeSimbolos, JTable tablaErrores, JLabel txtCantErrores, JTextArea area, JLabel errores) {
         //INICIALIZANDO LAS VARIABLES DE LOS MODELOS DE LAS TABLAS
         modelTablaDeSimbolos = (DefaultTableModel) tablaDeSimbolos.getModel();
         modelTablaErrores = (DefaultTableModel) tablaErrores.getModel();
@@ -51,6 +53,7 @@ public class Lexico {
 
         salidaDeTokens = new LinkedList<Token>();
         erroresSintacticos = new LinkedList<>();
+        reglasSintacticasAplicadas = new LinkedList<String>();
 
         palabrasReservadas = new LinkedList<>();
         palabrasReservadas.add("public");
@@ -297,8 +300,8 @@ public class Lexico {
         }
         imprimeNodo();
         sintactico();
-        System.out.println("valor P_C: " + contadorErroresSintaxis);
-        erroresSintacticos(area);
+        erroresSintacticos(errores);
+        reglasSintacticasUtilizadas(area);
         cantidadDeErroresDetectados(txtCantErrores);
 
         return salidaDeTokens;
@@ -309,29 +312,34 @@ public class Lexico {
         contadorErroresSintaxis++;
         System.out.println("sintactico: " + contadorErroresSintaxis);
         p = cabeza;
-        while (p != null) {
 
-            System.out.println(p.token + "-" + p.lexema);
+        if (p != null) {
 
-            do {
-                if (p != null) {
-                    reglasUtilizadas = "";
-                    declaraciones();
-                }
-            } while (p.token.equals("PALABRARESERVADA"));
+            while (p != null) {
 
-            do {
-                if (p != null) {
-                    sentencia();
-                } else {
-                    System.out.println("es null");
-                    break;
-                }
-            } while (p != null && p.token.equals("LETRA"));
+                System.out.println(p.token + "-" + p.lexema);
 
-            break;
+                do {
+                    if (p != null) {
+                        reglasUtilizadas = "";
+                        declaraciones();
+                    }
+                } while (p.token.equals("PALABRARESERVADA"));
+
+                do {
+                    if (p != null) {
+                        sentencia();
+                    } else {
+                        System.out.println("es null");
+                        break;
+                    }
+                } while (p != null && p.token.equals("LETRA"));
+                break;
+            }
+
+        } else {
+            erroresSintacticos.add("Se esperaba una declaracion y una sentencia");
         }
-
     }
 
     String PalRes, ident, puntocoma;
@@ -350,24 +358,36 @@ public class Lexico {
 //                }
 //            }
             if (p.token == "LETRA") {
-             ident = p.lexema;
-             p = p.sig;
+                ident = p.lexema;
+                p = p.sig;
 
-            if (p.token == "FIN_LINEA") {
-                if (p != null) {
-                    puntocoma = p.lexema;
-                    reglasUtilizadas = "regla 2: PalabraReservada Identificador ; ";
-                    System.out.println(reglasUtilizadas);
-                    p = p.sig;
-                    contadorErroresSintaxis++;
-                    System.out.println("Linea de codigo: " + PalRes + " " + ident + puntocoma);
+                switch (p.token) {
+                    case "ASIGNACION":
+                        expresion();
+                        break;
+                    case "FIN_LINEA":
+                        if (p.token == "FIN_LINEA") {
+                            if (p != null) {
+                                puntocoma = p.lexema;
+                                reglasUtilizadas = "regla 2: PalabraReservada Identificador ; ";
+                                System.out.println(reglasUtilizadas);
+                                p = p.sig;
+                                contadorErroresSintaxis++;
+                                System.out.println("Linea de codigo: " + PalRes + " " + ident + puntocoma);
+                                reglasSintacticasAplicadas.add("<PalabraReservada> <Identificador> \";\"");
+                            }
+                        } else {
+                            erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                        }
+                        break;
+                    default:
+                        erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                        break;
                 }
+
             } else {
-                erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                erroresSintacticos.add("declaraciones: Se esperaba un identificador\n revisar línea: " + contadorErroresSintaxis);
             }
-             } else {
-             erroresSintacticos.add("declaraciones: Se esperaba un identificador\n revisar línea: " + contadorErroresSintaxis);
-             }
         } else {
             erroresSintacticos.add("declaraciones: Se esperaba una palabra reservada\n revisar línea: " + contadorErroresSintaxis);
         }
@@ -389,19 +409,18 @@ public class Lexico {
     public void sentencia() {
         contadorErroresSintaxis++;
         System.out.println("sentencias: " + contadorErroresSintaxis);
-        if(p.token!="PALABRARESERVADA"){
+        if (p.token != "PALABRARESERVADA") {
             Asignacion();
         }
 
     }
 
     public void Asignacion() {
-
         System.out.println("asignacion: " + contadorErroresSintaxis);
         if (p.token == "LETRA") {
             p = p.sig;
-        }else{
-            erroresSintacticos.add("Se esperaba un identificador");
+        } else {
+            erroresSintacticos.add("Asignacion: Se esperaba un identificador, revisar linea:\n" + contadorErroresSintaxis);
         }
 
 //        while (p.token.equals("LETRA") || p.token.equals("SUBRAYADO") || p.token.equals("SIGNODOLAR")) {
@@ -423,8 +442,17 @@ public class Lexico {
                 // p = p.sig;
                 decremento();
                 break;
+            case "PALABRARESERVADA":
+                erroresSintacticos.add("Se esperaba una palabra reservada, revisar linea:\n" + contadorErroresSintaxis);
+                break;
+            case "SUMA":
+                erroresSintacticos.add("Se esperaba un incremento, revisar linea:\n" + contadorErroresSintaxis);
+                break;
+            case "RESTA":
+                erroresSintacticos.add("Se esperaba un decremento, revisar linea:\n" + contadorErroresSintaxis);
+                break;
             default:
-                erroresSintacticos.add("Se esperaba un ++ o -- o = luego del identificador");
+                erroresSintacticos.add("Se esperaba un \"++\" o \"--\" o \"=\" luego del identificador\n revisar línea: " + contadorErroresSintaxis);
                 break;
         }
 
@@ -436,28 +464,36 @@ public class Lexico {
             System.out.println("EN EXPRESION LLEGA " + p.lexema);
             if (p.token == "LETRA" || p.token == "NUMERO") {
                 p = p.sig;
-                if ((p.token == "SUMA") || (p.token == "RESTA") || (p.token == "MULTIPLICACION") || (p.token == "DIVISION")) {
-                    p = p.sig;
 
-                    if (p.token.equals("LETRA") || p.token.equals("NUMERO")) {
-                        p = p.sig;
-                        if (p != null) {
-                            if (p.token == "FIN_LINEA") {
-                                if (p != null) {
-                                    p = p.sig;
-                                    contadorErroresSintaxis++;
-                                }
-                            } else {
-                                erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                switch (p.token) {
+                    case "SUMA":
+                        operacionesAritmeticas();
+
+                        break;
+
+                    case "RESTA":
+                        operacionesAritmeticas();
+                        break;
+                    case "DIVISION":
+                        operacionesAritmeticas();
+                        break;
+                    case "MULTIPLICACION":
+                        operacionesAritmeticas();
+                        break;
+                    case "FIN_LINEA":
+                        if (p.token == "FIN_LINEA") {
+                            if (p != null) {
+                                p = p.sig;
+                                contadorErroresSintaxis++;
+                                reglasSintacticasAplicadas.add("<PalabraReservada> <Identificador> \"=\" <Identificador>|<Numero> \";\"");
                             }
+                        } else {
+                            erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
                         }
-                    } else {
-                        erroresSintacticos.add("Expresion: Se esperaba un identificador o un numero");
-                    }
-                    //expresion();
-
-                } else {
-                    erroresSintacticos.add("expresion: Se esperaba un operador aritmetico\n revisar línea: " + contadorErroresSintaxis);
+                        break;
+                    default:
+                        erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                        break;
                 }
 
             } else {
@@ -467,44 +503,30 @@ public class Lexico {
 
     }
 
-    public void EDITANDOexpresion() {
+    public void operacionesAritmeticas() {
+        p = p.sig;
 
-        if (p.token != "FIN_LINEA") {
+        if (p.token.equals("LETRA") || p.token.equals("NUMERO")) {
+            System.out.println("jajajajja" + p.token);
+            p = p.sig;
 
-            if (p.token.equals("LETRA") || p.token.equals("SUBRAYADO") || p.token.equals("SIGNODOLAR")) {
-                while (p.token.equals("LETRA") || p.token.equals("SUBRAYADO") || p.token.equals("SIGNODOLAR")) {
+            if (p != null) {
+                if (p.token == "FIN_LINEA") {
                     if (p != null) {
-                        identificador();
-                    }
-                }
-                if (p.token != "FIN_LINEA") {
-                    if ((p.token.equals("SUMA")) || (p.token.equals("RESTA")) || (p.token.equals("MULTIPLICACION")) || (p.token.equals("DIVISION"))) {
                         p = p.sig;
-                        EDITANDOexpresion();
-
-                    } else {
-                        erroresSintacticos.add("expresion: Se esperaba un operador aritmetico\n revisar línea: " + contadorErroresSintaxis);
+                        contadorErroresSintaxis++;
+                        reglasSintacticasAplicadas.add("<Identificador> \"=\" <Identificador>|<Numero> <Operador> <Identificador>|<Numero> \";\"");
                     }
-
+                } else {
+                    erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
                 }
-            } else if (p.token.equals("NUMERO")) {
-
-                if (p.token != "FIN_LINEA") {
-                    if ((p.token.equals("SUMA")) || (p.token.equals("RESTA")) || (p.token.equals("MULTIPLICACION")) || (p.token.equals("DIVISION"))) {
-                        p = p.sig;
-                        EDITANDOexpresion();
-
-                    } else {
-                        erroresSintacticos.add("expresion: Se esperaba un operador aritmetico\n revisar línea: " + contadorErroresSintaxis);
-                    }
-
-                }
-
             } else {
-                erroresSintacticos.add("expresion: Se esperaba un identificador o un entero\n revisar línea: " + contadorErroresSintaxis);
+                erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
             }
-        }
 
+        } else {
+            erroresSintacticos.add("Expresion: Se esperaba un identificador o un numero");
+        }
     }
 
     String inc_letra, inc_incremento, inc_puntoComa;
@@ -518,16 +540,18 @@ public class Lexico {
                 if (p.token == "FIN_LINEA") {
                     inc_puntoComa = p.lexema;
                     p = p.sig;
+                    reglasSintacticasAplicadas.add("<Identificador> <Incremento> \";\"");
+
                     System.out.println("Codigo: " + inc_letra + " " + inc_incremento + "" + inc_puntoComa);
                 } else {
-                    erroresSintacticos.add("incremento: Se esperaba un punto y coma");
+                    erroresSintacticos.add("incremento: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
                 }
             } else {
-                erroresSintacticos.add("incremento: Se esperaba un punto y coma");
+                erroresSintacticos.add("incremento: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
             }
 
         } else {
-            erroresSintacticos.add("incremento: se esperaba un signo de incremento");
+            erroresSintacticos.add("incremento: se esperaba un signo de incremento\n revisar línea: " + contadorErroresSintaxis);
         }
 
     }
@@ -539,21 +563,21 @@ public class Lexico {
             if (p != null) {
                 if (p.token == "FIN_LINEA") {
                     p = p.sig;
-
+                    reglasSintacticasAplicadas.add("<Identificador> <Decremento> \";\"");
                 } else {
-                    erroresSintacticos.add("decremento: Se esperaba un punto y coma");
+                    erroresSintacticos.add("decremento: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
                 }
             } else {
-                erroresSintacticos.add("decremento: Se esperaba un punto y coma");
+                erroresSintacticos.add("decremento: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
             }
 
         } else {
-            erroresSintacticos.add("decremento: se esperaba un signo de decremento");
+            erroresSintacticos.add("decremento: se esperaba un signo de decremento\n revisar línea: " + contadorErroresSintaxis);
         }
 
     }
 
-    public void erroresSintacticos(JTextArea area) {
+    public void erroresSintacticos(JLabel errores) {
         String var = "Analisis finalizado con exito";
         for (int i = 0; i < erroresSintacticos.size(); i++) {
             var = "";
@@ -565,7 +589,27 @@ public class Lexico {
             }
         }
         System.out.println(var);
-        area.setText(var);
+        errores.setText(var);
+        var = "";
+    }
+
+    public void reglasSintacticasUtilizadas(JTextArea area) {
+        String var = "Analisis finalizado con exito";
+        area.setText("");
+        for (int i = 0; i <= reglasSintacticasAplicadas.size() - 1; i++) {
+            var = "";
+
+            if (reglasSintacticasAplicadas.size() > 0) {
+                //System.out.println("analisis finalizado con errores");
+                //System.out.println("Errores: \n" + erroresSintacticos.get(i));
+                var = reglasSintacticasAplicadas.get(i) + "\n";
+                //break;
+            }
+            System.out.println(reglasSintacticasAplicadas.get(i));
+            area.append(reglasSintacticasAplicadas.get(i) + "\n");
+        }
+        // System.out.println(var);
+
         var = "";
     }
 

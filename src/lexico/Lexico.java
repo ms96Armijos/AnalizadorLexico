@@ -325,7 +325,6 @@ public class Lexico {
                         declaraciones();
                     }
                 } while (p.token.equals("PALABRARESERVADA"));
-
                 do {
                     if (p != null) {
                         sentencia();
@@ -334,9 +333,9 @@ public class Lexico {
                         break;
                     }
                 } while (p != null && p.token.equals("LETRA"));
+
                 break;
             }
-
         } else {
             erroresSintacticos.add("Se esperaba una declaracion y una sentencia");
         }
@@ -357,37 +356,47 @@ public class Lexico {
 //                    identificador();
 //                }
 //            }
-            if (p.token == "LETRA") {
-                ident = p.lexema;
-                p = p.sig;
-
-                switch (p.token) {
-                    case "ASIGNACION":
-                        expresion();
-                        break;
-                    case "FIN_LINEA":
-                        if (p.token == "FIN_LINEA") {
-                            if (p != null) {
-                                puntocoma = p.lexema;
-                                reglasUtilizadas = "regla 2: PalabraReservada Identificador ; ";
-                                System.out.println(reglasUtilizadas);
-                                p = p.sig;
-                                contadorErroresSintaxis++;
-                                System.out.println("Linea de codigo: " + PalRes + " " + ident + puntocoma);
-                                reglasSintacticasAplicadas.add("<PalabraReservada> <Identificador> \";\"");
-                            }
-                        } else {
-                            erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
-                        }
-                        break;
-                    default:
-                        erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
-                        break;
+            do {
+              
+                if (p != null) {
+                    identificador();
                 }
+                if (p.token.equals("NUMERO")) {
+                    erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n"+contadorErroresSintaxis);
+                    break;
+                }
+            } while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR"));
 
-            } else {
-                erroresSintacticos.add("declaraciones: Se esperaba un identificador\n revisar línea: " + contadorErroresSintaxis);
+//            if (p.token == "LETRA") {
+//                ident = p.lexema;
+//                p = p.sig;
+            switch (p.token) {
+                case "ASIGNACION":
+                    expresion();
+                    break;
+                case "FIN_LINEA":
+                    if (p.token == "FIN_LINEA") {
+                        if (p != null) {
+                            puntocoma = p.lexema;
+                            reglasUtilizadas = "regla 2: PalabraReservada Identificador ; ";
+                            System.out.println(reglasUtilizadas);
+                            p = p.sig;
+                            contadorErroresSintaxis++;
+                            System.out.println("Linea de codigo: " + PalRes + " " + ident + puntocoma);
+                            reglasSintacticasAplicadas.add("regla N°2: <PalabraReservada> <Identificador> \";\"");
+                        }
+                    } else {
+                        erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                    }
+                    break;
+                default:
+                    erroresSintacticos.add("declaraciones: Se esperaba un identificador\n revisar línea: " + contadorErroresSintaxis);
+                    break;
             }
+
+//            } else {
+//                erroresSintacticos.add("declaraciones: Se esperaba un identificador\n revisar línea: " + contadorErroresSintaxis);
+//            }
         } else {
             erroresSintacticos.add("declaraciones: Se esperaba una palabra reservada\n revisar línea: " + contadorErroresSintaxis);
         }
@@ -396,11 +405,11 @@ public class Lexico {
     public void identificador() {
 
         if (p != null) {
-            if ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNODOLAR")) {
+            if ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR") || (p.token == "NUMERO")) {
                 p = p.sig;
 
             } else {
-                erroresSintacticos.add("identificador: Se esperaba minimo  una combinacion de: LETRA + SUBRAYADO + SIGNODOLAR");
+                erroresSintacticos.add("identificador: Se esperaba identificador o un numero");
             }
         }
 
@@ -411,17 +420,26 @@ public class Lexico {
         System.out.println("sentencias: " + contadorErroresSintaxis);
         if (p.token != "PALABRARESERVADA") {
             Asignacion();
+        }else{
+            erroresSintacticos.add("Sentencia: Se esperaba un identificador");
         }
 
     }
 
     public void Asignacion() {
-        System.out.println("asignacion: " + contadorErroresSintaxis);
-        if (p.token == "LETRA") {
-            p = p.sig;
-        } else {
-            erroresSintacticos.add("Asignacion: Se esperaba un identificador, revisar linea:\n" + contadorErroresSintaxis);
-        }
+        System.out.println("asignacion: " + contadorErroresSintaxis );
+//        if (p.token == "LETRA") {
+//            p = p.sig;
+//        } else {
+//            erroresSintacticos.add("Asignacion: Se esperaba un identificador, revisar linea:\n" + contadorErroresSintaxis);
+//        }
+        do {
+            
+            if (p != null) {
+                identificador();
+            }
+           
+        } while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR"));
 
 //        while (p.token.equals("LETRA") || p.token.equals("SUBRAYADO") || p.token.equals("SIGNODOLAR")) {
 //            if (p != null) {
@@ -452,7 +470,7 @@ public class Lexico {
                 erroresSintacticos.add("Se esperaba un decremento, revisar linea:\n" + contadorErroresSintaxis);
                 break;
             default:
-                erroresSintacticos.add("Se esperaba un \"++\" o \"--\" o \"=\" luego del identificador\n revisar línea: " + contadorErroresSintaxis);
+                erroresSintacticos.add("Se esperaba un identificador\n revisar línea: " + contadorErroresSintaxis);
                 break;
         }
 
@@ -462,8 +480,19 @@ public class Lexico {
         p = p.sig;
         if (p != null) {
             System.out.println("EN EXPRESION LLEGA " + p.lexema);
-            if (p.token == "LETRA" || p.token == "NUMERO") {
-                p = p.sig;
+//            if (p.token == "LETRA" || p.token == "NUMERO") {
+//                p = p.sig;
+             do {
+                
+                if (p != null) {
+                    identificador();
+                }
+                if (p.token.equals("NUMERO")) {
+                    erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n"+contadorErroresSintaxis);
+                    break;
+                }
+            } while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR"));
+
 
                 switch (p.token) {
                     case "SUMA":
@@ -496,9 +525,9 @@ public class Lexico {
                         break;
                 }
 
-            } else {
-                erroresSintacticos.add("expresion: Se esperaba un identificador o un entero\n revisar línea: " + contadorErroresSintaxis);
-            }
+//            } else {
+//                erroresSintacticos.add("expresion: Se esperaba un identificador o un entero\n revisar línea: " + contadorErroresSintaxis);
+//            }
         }
 
     }

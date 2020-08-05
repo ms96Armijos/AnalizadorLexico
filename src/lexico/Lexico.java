@@ -1,9 +1,12 @@
 package lexico;
 
+import java.awt.Color;
 import modelo.Token;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.regex.Pattern;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
@@ -26,11 +29,16 @@ public class Lexico {
 
     LinkedList<String> reglasSintacticasAplicadas;
 
+    //CONCATENAR REGLAS Y AGREGAR A LA LISTA
+    LinkedList<String> reglasSintacticasObtenidasSegunToken;
+    String concatenaReglasUsadas = "";
+    String identificadorUnicamente = "";
+
     int estado;
     String lexema;
     boolean palabraReservada = false;
     int contadorLineas = 1;
-    int contadorErroresSintaxis = 1;
+    int contadorErroresSintaxis = 0;
     String reglasUtilizadas = "";
     String TempTipoToken;
 
@@ -54,6 +62,7 @@ public class Lexico {
         salidaDeTokens = new LinkedList<Token>();
         erroresSintacticos = new LinkedList<>();
         reglasSintacticasAplicadas = new LinkedList<String>();
+        reglasSintacticasObtenidasSegunToken = new LinkedList<String>();
 
         palabrasReservadas = new LinkedList<>();
         palabrasReservadas.add("public");
@@ -299,11 +308,30 @@ public class Lexico {
             tablaDeSimbolos.setModel(modelTablaDeSimbolos);
         }
         imprimeNodo();
-        sintactico();
-        erroresSintacticos(errores);
-        reglasSintacticasUtilizadas(area);
+
+        if (cantidadDeErroresDetectados(txtCantErrores) > 0) {
+
+            erroresSintacticos.add("Existen errores léxicos, corregir y continuar con el análisis");
+        } else {
+            sintactico();
+           
+            
+            if(erroresSintacticos(errores) > 0){
+                errores.setForeground(Color.red);
+                 erroresSintacticos.add("Existen errores léxicos, corregir y continuar con el análisis");
+            }else{
+                errores.setForeground(Color.blue);
+                reglasSintacticasUtilizadasConcatenadas(area);
+            }
+            
+        }
+
+        //reglasSintacticasUtilizadas(area);
         cantidadDeErroresDetectados(txtCantErrores);
 
+        //PRUEBAS DE IMPRESION DE LOS TOKENS
+        //imprimirEntreConNivel(cabeza, 1);
+        //mostrar();
         return salidaDeTokens;
     }
 
@@ -337,7 +365,7 @@ public class Lexico {
                 break;
             }
         } else {
-            erroresSintacticos.add("Se esperaba una declaracion y una sentencia");
+            erroresSintacticos.add("Se esperaba una declaracion y una sentencia, revisar linea: " + contadorErroresSintaxis);
         }
     }
 
@@ -348,6 +376,7 @@ public class Lexico {
         System.out.println("declaraciones: " + contadorErroresSintaxis);
 
         if (p.token == "PALABRARESERVADA") {
+            concatenaReglasUsadas = "PALABRARESERVADA";
             PalRes = p.lexema;
             p = p.sig;
 
@@ -356,34 +385,54 @@ public class Lexico {
 //                    identificador();
 //                }
 //            }
-            do {
-              
+            while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR")) {
+
                 if (p != null) {
-                    identificador();
+                    PalRes += identificador();
+                    
+
                 }
                 if (p.token.equals("NUMERO")) {
-                    erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n"+contadorErroresSintaxis);
+                    erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n" + contadorErroresSintaxis);
                     break;
                 }
-            } while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR"));
+
+            } 
+
+            if(PalRes != ""){
+                if (PalRes.contains("_")
+                    || PalRes.contains("$")
+                    || Pattern.matches("[a-zA-Z]+", PalRes) == false) {
+                concatenaReglasUsadas += " IDENTIFICADOR";
+                PalRes = "";
+                identificadorUnicamente = "";
+            }
+            }else{
+                erroresSintacticos.add("Se esperaba un identificador");
+            }
 
 //            if (p.token == "LETRA") {
 //                ident = p.lexema;
 //                p = p.sig;
+            System.out.println("ANTES DE ASICGACION " + p.lexema);
             switch (p.token) {
                 case "ASIGNACION":
+                    concatenaReglasUsadas += " " + p.lexema;
                     expresion();
                     break;
                 case "FIN_LINEA":
                     if (p.token == "FIN_LINEA") {
+                        concatenaReglasUsadas += " " + p.lexema;
                         if (p != null) {
                             puntocoma = p.lexema;
-                            reglasUtilizadas = "regla 2: PalabraReservada Identificador ; ";
+                            reglasUtilizadas = "regla: PalabraReservada Identificador ; ";
                             System.out.println(reglasUtilizadas);
+                            reglasSintacticasObtenidasSegunToken.add("==>> " + concatenaReglasUsadas);
+                            concatenaReglasUsadas = "";
                             p = p.sig;
                             contadorErroresSintaxis++;
                             System.out.println("Linea de codigo: " + PalRes + " " + ident + puntocoma);
-                            reglasSintacticasAplicadas.add("regla N°2: <PalabraReservada> <Identificador> \";\"");
+                            reglasSintacticasAplicadas.add("regla: PalabraReservada Identificador \";\"");
                         }
                     } else {
                         erroresSintacticos.add("declaraciones: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
@@ -402,66 +451,89 @@ public class Lexico {
         }
     }
 
-    public void identificador() {
+    public String identificador() {
 
         if (p != null) {
-            if ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR") || (p.token == "NUMERO")) {
+            if ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR")) {
+                //concatenaReglasUsadas+=" "+ "IDENTIFICADOR";
+                identificadorUnicamente += p.lexema;
                 p = p.sig;
 
             } else {
-                erroresSintacticos.add("identificador: Se esperaba identificador o un numero");
+                erroresSintacticos.add("identificador: Se esperaba identificador o un numero, revisar linea: " + contadorErroresSintaxis);
             }
         }
 
+        return p.lexema;
     }
 
     public void sentencia() {
-        contadorErroresSintaxis++;
+        
         System.out.println("sentencias: " + contadorErroresSintaxis);
         if (p.token != "PALABRARESERVADA") {
             Asignacion();
-        }else{
-            erroresSintacticos.add("Sentencia: Se esperaba un identificador");
+        } else {
+            erroresSintacticos.add("Sentencia: Se esperaba un identificador, revisar linea: " + contadorErroresSintaxis);
         }
 
     }
 
     public void Asignacion() {
-        System.out.println("asignacion: " + contadorErroresSintaxis );
+        System.out.println("asignación: " + contadorErroresSintaxis);
 //        if (p.token == "LETRA") {
 //            p = p.sig;
 //        } else {
 //            erroresSintacticos.add("Asignacion: Se esperaba un identificador, revisar linea:\n" + contadorErroresSintaxis);
 //        }
-        do {
-            
-            if (p != null) {
-                identificador();
-            }
-           
-        } while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR"));
+        while ((!p.token.equals("NUMERO")) && (p.token.equals("LETRA")) || (p.token.equals("SUBRAYADO")) || (p.token.equals("SIGNO_DOLAR"))) {
 
+            if (p != null) {
+                PalRes += identificador();
+            }
+            if (p.token.equals("NUMERO")) {
+                erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n" + contadorErroresSintaxis);
+                break;
+            }
+
+        }
+        if (PalRes.contains("_")
+                || PalRes.contains("$")
+                || Pattern.matches("[a-zA-Z]+", PalRes) == false) {
+            concatenaReglasUsadas += " IDENTIFICADOR";
+            PalRes = "";
+            identificadorUnicamente="";
+        } else {
+            erroresSintacticos.add("DECLARACIN: Se esperaba un identificador");
+        }
 //        while (p.token.equals("LETRA") || p.token.equals("SUBRAYADO") || p.token.equals("SIGNODOLAR")) {
 //            if (p != null) {
 //                identificador();
 //            }
 //        }
         //p = p.sig;
+
+        /*if(p.token == "NUMERO"){
+         concatenaReglasUsadas += " NUMERO";
+         p=p.sig;
+         }*/
         System.out.println("ANTES DEL CASE: " + p.token);
         switch (p.token) {
             case "ASIGNACION":
+                concatenaReglasUsadas += " " + p.lexema;
                 expresion();
                 break;
             case "INCREMENTO":
                 // p = p.sig;
+                concatenaReglasUsadas += " INCREMENTO";
                 incremento();
                 break;
             case "DECREMENTO":
                 // p = p.sig;
+                concatenaReglasUsadas += " DECREMENTO";
                 decremento();
                 break;
             case "PALABRARESERVADA":
-                erroresSintacticos.add("Se esperaba una palabra reservada, revisar linea:\n" + contadorErroresSintaxis);
+                erroresSintacticos.add("Se esperaba un identificador, revisar linea:\n" + contadorErroresSintaxis);
                 break;
             case "SUMA":
                 erroresSintacticos.add("Se esperaba un incremento, revisar linea:\n" + contadorErroresSintaxis);
@@ -478,52 +550,79 @@ public class Lexico {
 
     public void expresion() {
         p = p.sig;
+        if(p.token.equals("PALABRARESERVADA")){
+                erroresSintacticos.add("Se esperaba un identificador o un número, revisar línea: "+contadorErroresSintaxis);
+            }
         if (p != null) {
             System.out.println("EN EXPRESION LLEGA " + p.lexema);
 //            if (p.token == "LETRA" || p.token == "NUMERO") {
 //                p = p.sig;
-             do {
-                
+
+            while (p.token!="NUMERO" && (p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR")) {
+
                 if (p != null) {
-                    identificador();
+                    PalRes += identificador();
+                    
+                
                 }
                 if (p.token.equals("NUMERO")) {
-                    erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n"+contadorErroresSintaxis);
+                    erroresSintacticos.add("El identificador no puede contener digitos, revisar linea: \n" + contadorErroresSintaxis);
                     break;
                 }
-            } while ((p.token == "LETRA") || (p.token == "SUBRAYADO") || (p.token == "SIGNO_DOLAR"));
+            }
+            System.out.println("PALRES: "+ PalRes);
+            if(PalRes != ""){
+                if (PalRes.contains("_")
+                    || PalRes.contains("$")
+                    || Pattern.matches("[a-zA-Z]+", PalRes) == false) {
+                concatenaReglasUsadas += " IDENTIFICADOR";
+                PalRes = "";
+                identificadorUnicamente="";
+            } 
+            }
 
+            if (p.token == "NUMERO") {
+                concatenaReglasUsadas += " NUMERO";
+                p = p.sig;
+            }
+            
 
-                switch (p.token) {
-                    case "SUMA":
-                        operacionesAritmeticas();
-
-                        break;
-
-                    case "RESTA":
-                        operacionesAritmeticas();
-                        break;
-                    case "DIVISION":
-                        operacionesAritmeticas();
-                        break;
-                    case "MULTIPLICACION":
-                        operacionesAritmeticas();
-                        break;
-                    case "FIN_LINEA":
-                        if (p.token == "FIN_LINEA") {
-                            if (p != null) {
-                                p = p.sig;
-                                contadorErroresSintaxis++;
-                                reglasSintacticasAplicadas.add("<PalabraReservada> <Identificador> \"=\" <Identificador>|<Numero> \";\"");
-                            }
-                        } else {
-                            erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+            switch (p.token) {
+                
+                case "SUMA":
+                    concatenaReglasUsadas += " " + p.lexema;
+                    operacionesAritmeticas();
+                    break;
+                case "RESTA":
+                    concatenaReglasUsadas += " " + p.lexema;
+                    operacionesAritmeticas();
+                    break;
+                case "DIVISION":
+                    concatenaReglasUsadas += " " + p.lexema;
+                    operacionesAritmeticas();
+                    break;
+                case "MULTIPLICACION":
+                    concatenaReglasUsadas += " " + p.lexema;
+                    operacionesAritmeticas();
+                    break;
+                case "FIN_LINEA":
+                    if (p.token == "FIN_LINEA") {
+                        if (p != null) {
+                            concatenaReglasUsadas += " " + p.lexema;
+                            reglasSintacticasObtenidasSegunToken.add("==>> " + concatenaReglasUsadas);
+                            concatenaReglasUsadas = "";
+                            p = p.sig;
+                            contadorErroresSintaxis++;
+                            reglasSintacticasAplicadas.add("<PalabraReservada> <Identificador> \"=\" <Identificador>|<Numero> \";\"");
                         }
-                        break;
-                    default:
+                    } else {
                         erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
-                        break;
-                }
+                    }
+                    break;
+                default:
+                    erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                    break;
+            }
 
 //            } else {
 //                erroresSintacticos.add("expresion: Se esperaba un identificador o un entero\n revisar línea: " + contadorErroresSintaxis);
@@ -537,24 +636,52 @@ public class Lexico {
 
         if (p.token.equals("LETRA") || p.token.equals("NUMERO")) {
             System.out.println("jajajajja" + p.token);
-            p = p.sig;
 
-            if (p != null) {
-                if (p.token == "FIN_LINEA") {
+            switch (p.token) {
+                case "NUMERO":
+                    concatenaReglasUsadas += " NUMERO";
+                    p = p.sig;
                     if (p != null) {
-                        p = p.sig;
-                        contadorErroresSintaxis++;
-                        reglasSintacticasAplicadas.add("<Identificador> \"=\" <Identificador>|<Numero> <Operador> <Identificador>|<Numero> \";\"");
+                        if (p.token == "FIN_LINEA") {
+                            if (p != null) {
+                                concatenaReglasUsadas += " " + p.lexema;
+                                reglasSintacticasObtenidasSegunToken.add("==>> " + concatenaReglasUsadas);
+                                concatenaReglasUsadas = "";
+                                p = p.sig;
+                                contadorErroresSintaxis++;
+                                reglasSintacticasAplicadas.add("Identificador \"=\" Identificador | Numero Operador Identificador | Numero \";\"");
+                            }
+                        } else {
+                            erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                        }
+                    } else {
+                        erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
                     }
-                } else {
-                    erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
-                }
-            } else {
-                erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                    break;
+                case "LETRA":
+                    concatenaReglasUsadas += " IDENTIFICADOR";
+                    p = p.sig;
+                    if (p != null) {
+                        if (p.token == "FIN_LINEA") {
+                            if (p != null) {
+                                concatenaReglasUsadas += " " + p.lexema;
+                                reglasSintacticasObtenidasSegunToken.add("==>> " + concatenaReglasUsadas);
+                                concatenaReglasUsadas = "";
+                                p = p.sig;
+                                contadorErroresSintaxis++;
+                                reglasSintacticasAplicadas.add("Identificador \"=\" Identificador | Numero Operador Identificador | Numero \";\"");
+                            }
+                        } else {
+                            erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                        }
+                    } else {
+                        erroresSintacticos.add("Expresion: se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
+                    }
+                    break;
             }
 
         } else {
-            erroresSintacticos.add("Expresion: Se esperaba un identificador o un numero");
+            erroresSintacticos.add("Expresion: Se esperaba un identificador o un numero, revisar linea: " + contadorErroresSintaxis);
         }
     }
 
@@ -563,13 +690,18 @@ public class Lexico {
     public void incremento() {
 
         if ((p.token == "INCREMENTO")) {
+            //concatenaReglasUsadas += " " + p.lexema;
             inc_incremento = p.lexema;
             p = p.sig;
             if (p != null) {
                 if (p.token == "FIN_LINEA") {
+                    concatenaReglasUsadas += " " + p.lexema;
                     inc_puntoComa = p.lexema;
+                    reglasSintacticasObtenidasSegunToken.add("==>> " + concatenaReglasUsadas);
+                    concatenaReglasUsadas = "";
                     p = p.sig;
-                    reglasSintacticasAplicadas.add("<Identificador> <Incremento> \";\"");
+                    contadorErroresSintaxis++;
+                    reglasSintacticasAplicadas.add("Identificador Incremento \";\"");
 
                     System.out.println("Codigo: " + inc_letra + " " + inc_incremento + "" + inc_puntoComa);
                 } else {
@@ -588,11 +720,16 @@ public class Lexico {
     public void decremento() {
 
         if (p.token == "DECREMENTO") {
+            //concatenaReglasUsadas += " " + p.lexema;
             p = p.sig;
             if (p != null) {
                 if (p.token == "FIN_LINEA") {
+                    concatenaReglasUsadas += " " + p.lexema;
+                    reglasSintacticasObtenidasSegunToken.add("==>> " + concatenaReglasUsadas);
+                    concatenaReglasUsadas = "";
                     p = p.sig;
-                    reglasSintacticasAplicadas.add("<Identificador> <Decremento> \";\"");
+                    contadorErroresSintaxis++;
+                    reglasSintacticasAplicadas.add("Identificador Decremento \";\"");
                 } else {
                     erroresSintacticos.add("decremento: Se esperaba un punto y coma\n revisar línea: " + contadorErroresSintaxis);
                 }
@@ -606,42 +743,55 @@ public class Lexico {
 
     }
 
-    public void erroresSintacticos(JLabel errores) {
+    public int erroresSintacticos(JLabel errores) {
+         int err = 0;
         String var = "Analisis finalizado con exito";
+        errores.setText("");
         for (int i = 0; i < erroresSintacticos.size(); i++) {
             var = "";
             if (erroresSintacticos.size() > 0) {
                 //System.out.println("analisis finalizado con errores");
                 //System.out.println("Errores: \n" + erroresSintacticos.get(i));
                 var += erroresSintacticos.get(i);
+                err +=1;
                 break;
             }
         }
         System.out.println(var);
         errores.setText(var);
         var = "";
+        return err;
     }
 
-    public void reglasSintacticasUtilizadas(JTextArea area) {
-        String var = "Analisis finalizado con exito";
+    /*public void reglasSintacticasUtilizadas(JTextArea area) {
         area.setText("");
         for (int i = 0; i <= reglasSintacticasAplicadas.size() - 1; i++) {
-            var = "";
 
             if (reglasSintacticasAplicadas.size() > 0) {
                 //System.out.println("analisis finalizado con errores");
                 //System.out.println("Errores: \n" + erroresSintacticos.get(i));
-                var = reglasSintacticasAplicadas.get(i) + "\n";
                 //break;
             }
             System.out.println(reglasSintacticasAplicadas.get(i));
             area.append(reglasSintacticasAplicadas.get(i) + "\n");
         }
-        // System.out.println(var);
+    }*/
 
-        var = "";
+    public void reglasSintacticasUtilizadasConcatenadas(JTextArea area) {
+        area.setText("");
+        for (int i = 0; i <= reglasSintacticasObtenidasSegunToken.size() - 1; i++) {
+
+            if (reglasSintacticasObtenidasSegunToken.size() > 0) {
+                //System.out.println("analisis finalizado con errores");
+                //System.out.println("Errores: \n" + erroresSintacticos.get(i));
+                //break;
+            }
+            System.out.println("RULER: " + reglasSintacticasObtenidasSegunToken.get(i));
+            area.append(reglasSintacticasObtenidasSegunToken.get(i) + "\n");
+        }
     }
 
+  
     public void eliminarNOdeTablaDeSimbolos() {
         for (int j = 0; j < modelTablaDeSimbolos.getRowCount(); j++) {
             if (modelTablaDeSimbolos.getValueAt(j, 2).equals("NO")) {
@@ -650,15 +800,17 @@ public class Lexico {
         }
     }
 
-    public void cantidadDeErroresDetectados(JLabel txtErrores) {
-
+    public int cantidadDeErroresDetectados(JLabel txtErrores) {
+        int errores = 0;
         txtErrores.setText("No hay errores");
         for (int i = 0; i < modelTablaErrores.getRowCount(); i++) {
             if (!modelTablaErrores.getValueAt(i, 2).equals("")) {
                 txtErrores.setText("Se han encontrado: " + (i + 1) + " errores");
+                errores += 1;
             }
 
         }
+        return errores;
     }
 
     public void imprimirListaDeTokens(LinkedList<Token> listaToken, JTable tablaTokens, JLabel cantidadDeTokens) {

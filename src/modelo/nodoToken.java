@@ -19,6 +19,20 @@ public class nodoToken {
         this.lexema = lexema;
         this.token = token;
     }
-;
+
+    public String getLexema() {
+        return lexema;
+    }
+
+    public String getToken() {
+        return token;
+    }
+    
+    
+    public void mostrar(){
+
+        System.out.println("LEXEMA: "+ lexema+ " TOKEN: "+ token);
+
+    }
 
 }
